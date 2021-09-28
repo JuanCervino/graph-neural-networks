@@ -67,6 +67,8 @@ startRunTime = datetime.datetime.now()
 #                                                                   #
 #####################################################################
 
+print('This')
+
 graphType = 'movie' # Graph type: 'user'-based or 'movie'-based
 labelID = [50] # Which node to focus on (either a list or the str 'all')
 # When 'movie': [1]: Toy Story, [50]: Star Wars, [258]: Contact,
