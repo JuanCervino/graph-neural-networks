@@ -30,11 +30,11 @@ Epidemics (class): loads the edge list of the friendship network of the high
 
 import os
 import pickle
-import hdf5storage # This is required to import old Matlab(R) files.
-import urllib.request # To download from the internet
-import zipfile # To handle zip files
-import gzip # To handle gz files
-import shutil # Command line utilities
+#import hdf5storage # This is required to import old Matlab(R) files.
+#import urllib.request # To download from the internet
+#import zipfile # To handle zip files
+#import gzip # To handle gz files
+#import shutil # Command line utilities
 import matplotlib
 import csv
 matplotlib.rcParams['text.usetex'] = True
@@ -4332,7 +4332,7 @@ class TwentyNews(_dataForClassification):
 # Copied almost verbatim from the code by Michäel Defferrard, available at
 # http://github.com/mdeff/cnn_graph
 
-import gensim
+#import gensim
 import sklearn, sklearn.datasets, sklearn.metrics
 import scipy.sparse
 

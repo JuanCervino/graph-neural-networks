@@ -29,7 +29,14 @@
 #####################################################################
 
 #\\\ Standard libraries:
-import os
+
+import sys,os
+
+os.chdir('..')
+cwd = os.getcwd()
+print(cwd)
+sys.path.append(cwd)
+
 import numpy as np
 import matplotlib
 matplotlib.rcParams['text.usetex'] = True
@@ -125,6 +132,8 @@ saveSeed(randomStates, saveDir)
 # DATA #
 ########
 
+epsilons = [0.001,0.01,0.1]
+
 useGPU = True # If true, and GPU is available, use it.
 
 ratioTrain = 0.9 # Ratio of training samples
@@ -141,7 +150,7 @@ minRatings = 0 # Discard samples (rows and columns) with less than minRatings
 interpolateRatings = False # Interpolate ratings with nearest-neighbors rule
     # before feeding them into the GNN
 
-nDataSplits = 10 # Number of data realizations
+nDataSplits = 1 # Number of data realizations
 # Obs.: The built graph depends on the split between training, validation and
 # testing. Therefore, we will run several of these splits and average across
 # them, to obtain some result that is more robust to this split.
@@ -189,7 +198,7 @@ beta2 = 0.999 # ADAM option only
 lossFunction = nn.SmoothL1Loss
 
 #\\\ Overall training options
-nEpochs = 40 # Number of epochs
+nEpochs = 1 # Number of epochs
 batchSize = 5 # Batch size
 doLearningRateDecay = False # Learning rate decay
 learningRateDecayRate = 0.9 # Rate
@@ -220,11 +229,11 @@ writeVarValues(varsFile,
 # MLP layer combining the features at all nodes).
     
 # Select desired architectures
-doSelectionGNN = True
+doSelectionGNN = False
 doLocalGNN = True
 
-do1Layer = True
-do2Layers = True
+do1Layer = False
+do2Layers = False
 
 # In this section, we determine the (hyper)parameters of models that we are
 # going to train. This only sets the parameters. The architectures need to be
@@ -359,6 +368,11 @@ if doLocalGNN:
     #\\\ EVALUATOR
     
     modelLclGNN['evaluator'] = evaluation.evaluateSingleNode
+
+    # \\\ EVALUATOR PERTURBATION
+
+    # modelLclGNN['evaluatorPerturbation'] = evaluation.evaluateRelativePerturbations
+    modelLclGNN['evaluatorPerturbation'] = evaluation.evaluateSingleNodeRelativePerturbation
 
 #\\\\\\\\\\\\
 #\\\ MODEL 3: Local GNN with 1 less layer
@@ -609,7 +623,8 @@ for split in range(nDataSplits):
         thisDevice = modelDict.pop('device')
         thisTrainer = modelDict.pop('trainer')
         thisEvaluator = modelDict.pop('evaluator')
-        
+        thisEvaluatorPerturbation = modelDict.pop('evaluatorPerturbation')
+
         # If more than one graph or data realization is going to be carried out,
         # we are going to store all of thos models separately, so that any of
         # them can be brought back and studied in detail.
@@ -679,6 +694,7 @@ for split in range(nDataSplits):
                                    thisOptim,
                                    thisTrainer,
                                    thisEvaluator,
+                                   thisEvaluatorPerturbation,
                                    thisDevice,
                                    thisName,
                                    saveDir)
@@ -778,15 +794,35 @@ for split in range(nDataSplits):
 
         # Evaluate the model
         thisEvalVars = modelsGNN[thisModel].evaluate(data)
-        
+
+        thisEvalVarsPerturbation=[]
+        for epsilon in epsilons:
+            print(epsilon)
+            thisEvalVarsPerturbation = thisEvalVarsPerturbation + [modelsGNN[thisModel].evaluatePerturbation(data,epsilon)]
+
         # Save the outputs
         thisCostBest = thisEvalVars['costBest']
         thisCostLast = thisEvalVars['costLast']
-        
+
+        thisCostPerturbationBest = []
+        thisCostPerturbationLast = []
+
+        for i in len(epsilons):
+            thisCostPerturbationBest = thisCostPerturbationBest + thisEvalVarsPerturbation[i]['costBest']
+            thisCostPerturbationLast = thisCostPerturbationBest + thisEvalVarsPerturbation[i]['costLast']
+
+        # thisCostPerturbationBest = thisEvalVarsPerturbation['costBest']
+        # thisCostPerturbationLast = thisEvalVarsPerturbation['costLast']
+
+
         # Write values
         writeVarValues(varsFile,
                        {'costBest%s' % thisModel: thisCostBest,
-                        'costLast%s' % thisModel: thisCostLast})
+                        'costLast%s' % thisModel: thisCostLast,},)
+        for i in len(epsilons):
+            writeVarValues(varsFile,
+                           {'Epsilon'+str(epsilons[i])+', costPerturbationBest%s' % thisModel: thisCostPerturbationBest[i],
+                            'Epsilon'+str(epsilons[i])+', costPerturbationLast%s' % thisModel: thisCostPerturbationLast[i],} ,)
 
         # Now check which is the model being trained
         costBest[modelName][split] = thisCostBest
@@ -795,8 +831,8 @@ for split in range(nDataSplits):
         # the corresponding error.
         
         if doPrint:
-            print("\t%s: %.4f [Best] %.4f [Last]" % (thisModel, thisCostBest,
-                                                     thisCostLast))
+            print("\t%s: %.4f [Best] %.4f [Last],Perturbed %.4f [Best] %.4f [Last]" % (thisModel, thisCostBest,
+                                                     thisCostLast,thisCostPerturbationBest,thisCostPerturbationLast))
 
 ############################
 # FINAL EVALUATION RESULTS #

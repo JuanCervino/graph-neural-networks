@@ -59,6 +59,8 @@ class Model:
                  trainer,
                  # Evaluating Algorithm (Modules.evaluation)
                  evaluator,
+                 # Evaluating Algorithm (Modules.evaluationPerturbation)
+                 evaluatorPerturbation,
                  # Other
                  device, name, saveDir):
         
@@ -85,6 +87,8 @@ class Model:
         self.trainer = trainer
         #\\\ EVALUATING ALGORITHM
         self.evaluator = evaluator
+        #\\\ EVALUATING PERTURBATION ALGORITHM
+        self.evaluatorPerturbation = evaluatorPerturbation
         #\\\ OTHER
         # Device
         self.device = device
@@ -102,6 +106,10 @@ class Model:
     def evaluate(self, data, **kwargs):
         
         return self.evaluator(self, data, **kwargs)
+
+    def evaluatePerturbation(self, data, **kwargs):
+
+        return self.evaluatorPerturbation (self, data, **kwargs)
     
     def save(self, label = '', **kwargs):
         if 'saveDir' in kwargs.keys():
