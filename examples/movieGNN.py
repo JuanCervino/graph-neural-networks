@@ -74,7 +74,9 @@ startRunTime = datetime.datetime.now()
 #                                                                   #
 #####################################################################
 
-print('This')
+epsilons = [0.0001,0.001,0.01,0.1,0.2,0.5]
+numberPerturbations=10
+trainStabilityEpsilon=0.1
 
 graphType = 'movie' # Graph type: 'user'-based or 'movie'-based
 labelID = [50] # Which node to focus on (either a list or the str 'all')
@@ -100,7 +102,7 @@ dataDir = os.path.join('datasets','movielens')
 today = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 # Append date and time of the run to the directory, to avoid several runs of
 # overwritting each other.
-saveDir = saveDir + '-' + graphType + '-' + labelIDstr + '-' + today
+saveDir = saveDir + '-' + graphType + '-' + labelIDstr + '-' + today + 'epsilonTrain=' + str(trainStabilityEpsilon)
 # Create directory 
 if not os.path.exists(saveDir):
     os.makedirs(saveDir)
@@ -108,7 +110,9 @@ if not os.path.exists(saveDir):
 varsFile = os.path.join(saveDir,'hyperparameters.txt')
 with open(varsFile, 'w+') as file:
     file.write('%s\n\n' % datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-
+    file.write('Epsilon Train = ' + str(trainStabilityEpsilon) + '\n')
+    file.write( 'Number of perturbations'  + str(numberPerturbations))
+    file.write('\n\n')
 #\\\ Save seeds for reproducibility
 #   PyTorch seeds
 torchState = torch.get_rng_state()
@@ -132,7 +136,6 @@ saveSeed(randomStates, saveDir)
 # DATA #
 ########
 
-epsilons = [0.001,0.01,0.1]
 
 useGPU = True # If true, and GPU is available, use it.
 
@@ -150,7 +153,7 @@ minRatings = 0 # Discard samples (rows and columns) with less than minRatings
 interpolateRatings = False # Interpolate ratings with nearest-neighbors rule
     # before feeding them into the GNN
 
-nDataSplits = 1 # Number of data realizations
+nDataSplits = 10 # Number of data realizations
 # Obs.: The built graph depends on the split between training, validation and
 # testing. Therefore, we will run several of these splits and average across
 # them, to obtain some result that is more robust to this split.
@@ -198,7 +201,7 @@ beta2 = 0.999 # ADAM option only
 lossFunction = nn.SmoothL1Loss
 
 #\\\ Overall training options
-nEpochs = 1 # Number of epochs
+nEpochs = 20 # Number of epochs
 batchSize = 5 # Batch size
 doLearningRateDecay = False # Learning rate decay
 learningRateDecayRate = 0.9 # Rate
@@ -291,7 +294,7 @@ if doSelectionGNN:
     modelSelGNN['trainer'] = training.Trainer
     
     #\\\ EVALUATOR
-    
+
     modelSelGNN['evaluator'] = evaluation.evaluate
     
 
@@ -366,8 +369,11 @@ if doLocalGNN:
     modelLclGNN['trainer'] = training.TrainerSingleNode
     
     #\\\ EVALUATOR
-    
-    modelLclGNN['evaluator'] = evaluation.evaluateSingleNode
+
+    if trainStabilityEpsilon==0:
+        modelLclGNN['evaluator'] = evaluation.evaluateSingleNode
+    else:
+        modelLclGNN['evaluator'] = evaluation.evaluateSingleNodeNoBest
 
     # \\\ EVALUATOR PERTURBATION
 
@@ -409,8 +415,8 @@ if doLocalGNN:
 # Options:
 doPrint = True # Decide whether to print stuff while running
 doLogging = False # Log into tensorboard
-doSaveVars = True # Save (pickle) useful variables
-doFigs = True # Plot some figures (this only works if doSaveVars is True)
+doSaveVars = False # Save (pickle) useful variables
+doFigs = False # Plot some figures (this only works if doSaveVars is True)
 # Parameters:
 printInterval = 5 # After how many training steps, print the partial results
 #   0 means to never print partial results while training
@@ -468,9 +474,18 @@ if doLogging:
 # mean and standard deviation (across the split dimension).
 costBest = {} # Cost for the best model (Evaluation cost: RMSE)
 costLast = {} # Cost for the last model
+costPerturbationBest = {}
+costPerturbationLast = {}
 for thisModel in modelList: # Create an element for each split realization,
     costBest[thisModel] = [None] * nDataSplits
     costLast[thisModel] = [None] * nDataSplits
+
+    costPerturbationBest[thisModel]  = [None] * len(epsilons)
+    costPerturbationLast[thisModel]  = [None] * len(epsilons)
+
+    for e in range(len(epsilons)):
+        costPerturbationBest[thisModel][e]= [None] * nDataSplits
+        costPerturbationLast[thisModel][e]= [None] * nDataSplits
 
 if doFigs:
     #\\\ SAVE SPACE:
@@ -526,6 +541,46 @@ trainingOptsPerModel= {}
 # Start generating a new data split for each of the number of data splits that
 # we previously specified
 
+
+#   Load the data, which will give a specific split
+data = alegnn.utils.dataTools.MovieLens(graphType,  # 'user' or 'movies'
+                                        labelID,  # ID of node to interpolate
+                                        ratioTrain,  # ratio of training samples
+                                        ratioValid,  # ratio of validation samples
+                                        dataDir,  # directory where dataset is
+                                        # Extra options
+                                        keepIsolatedNodes,
+                                        forceUndirected,
+                                        forceConnected,
+                                        kNN,  # Number of nearest neighbors
+                                        maxNodes=maxNodes,
+                                        maxDataPoints=maxDataPoints,
+                                        minRatings=minRatings,
+                                        interpolate=interpolateRatings)
+
+if trainStabilityEpsilon != 0:
+    nTrain = data.nTrain  # size of the training set
+    if nTrain < batchSize:
+        nBatches = 1
+        batchSize = [nTrain]
+    elif nTrain % batchSize != 0:
+        nBatches = np.ceil(nTrain / batchSize).astype(np.int64)
+        batchSize = [batchSize] * nBatches
+        # If the sum of all batches so far is not the total number of
+        # graphs, start taking away samples from the last batch (remember
+        # that we used ceiling, so we are overshooting with the estimated
+        # number of batches)
+        while sum(batchSize) != nTrain:
+            batchSize[-1] -= 1
+    # If they fit evenly, then just do so.
+    else:
+        nBatches = np.int(nTrain / batchSize)
+        batchSize = [batchSize] * nBatches
+
+
+
+
+
 for split in range(nDataSplits):
 
     #%%##################################################################
@@ -559,7 +614,7 @@ for split in range(nDataSplits):
                                             maxDataPoints = maxDataPoints,
                                             minRatings = minRatings,
                                             interpolate = interpolateRatings)
-    
+
     if doPrint:
         print("OK")
 
@@ -727,7 +782,7 @@ for split in range(nDataSplits):
     print("")
     
     # We train each model separately
-    
+
     for thisModel in modelsGNN.keys():
         
         if doPrint:
@@ -746,14 +801,100 @@ for split in range(nDataSplits):
         # Identify the specific split number at training time
         if nDataSplits > 1:
             trainingOptsPerModel[modelName]['graphNo'] = split
-        
-        # Train the model
-        thisTrainVars = modelsGNN[thisModel].train(data,
+
+
+        if trainStabilityEpsilon==0:
+            # Train the model UNPERTURBED
+            thisTrainVars = modelsGNN[thisModel].train(data,
                                                    nEpochs,
                                                    batchSize,
                                                    **trainingOptsPerModel[modelName])
+        else:
 
-        if doFigs:
+
+            # Train the model PERTURBED
+            # Number of batches: If the desired number of batches does not split the
+            # dataset evenly, we reduce the size of the last batch (the number of
+            # samples in the last batch).
+            # The variable batchSize is a list of length nBatches (number of
+            # batches), where each element of the list is a number indicating the
+            # size of the corresponding batch.
+            # print(nTrain, batchSize)
+
+            # batchIndex is used to determine the first and last element of each
+            # batch.
+            # If batchSize is, for example [20,20,20] meaning that there are three
+            # batches of size 20 each, then cumsum will give [20,40,60] which
+            # determines the last index of each batch: up to 20, from 20 to 40, and
+            # from 40 to 60. We add the 0 at the beginning so that
+            # batchIndex[b]:batchIndex[b+1] gives the right samples for batch b.
+            batchIndex = np.cumsum(batchSize).tolist()
+            batchIndex = [0] + batchIndex
+
+            lossTrain = []
+            costTrain = []
+            lossValid = []
+            costValid = []
+
+            for epoch in range(nEpochs):
+                randomPermutation = np.random.permutation(data.nTrain)
+                idxEpoch = [int(i) for i in randomPermutation]
+
+                for batch in range(nBatches): # nBatches
+                    # Extract the adequate batch
+                    thisBatchIndices = idxEpoch[batchIndex[batch]
+                                                : batchIndex[batch + 1]]
+
+                    xTrain, yTrain = data.getSamples('train', thisBatchIndices)
+                    xTrain = xTrain.to(modelsGNN[thisModel].device)
+                    yTrain = yTrain.to(modelsGNN[thisModel].device)
+                    targetIDs = data.getLabelID('train', thisBatchIndices)
+
+                    # Reset gradients
+                    modelsGNN[thisModel].archit.zero_grad()
+
+                    # Obtain the output of the GNN
+                    yHatTrain = modelsGNN[thisModel].archit.singleNodeForward(xTrain, targetIDs)
+                    # Compute loss
+                    lossValueTrain = modelsGNN[thisModel].loss(yHatTrain, yTrain)
+
+                    # Compute gradients
+                    lossValueTrain.backward()
+
+                    # Optimize
+                    modelsGNN[thisModel].optim.step()
+
+                    costValueTrain = data.evaluate(yHatTrain.data, yTrain).item()
+
+                    # Save values
+                    lossTrain += [lossValueTrain]
+                    costTrain += [costValueTrain]
+
+
+            modelsGNN[thisModel].save(label='Last')
+
+
+            # for i in range(numberPerturbations):
+            #     # Create Perturbed Matrix
+            #     E = np.random.uniform(size=S.shape)
+            #     E = trainStabilityEpsilon * E / np.linalg.norm(E)
+            #     # print(S.shape,E.shape)
+            #     S_hat = S + S @ E + E @ S
+            #     if '1Ly' in thisModel:
+            #         modelsGNN[thisModel].archit.changeGSO(E, [E.shape[0]])
+            #     elif '2Ly' in thisModel:
+            #         modelsGNN[thisModel].archit.changeGSO(E, [E.shape[0], E.shape[0]])
+            #
+            #     thisTrainVars = modelsGNN[thisModel].train(data,
+            #                                                nEpochs,
+            #                                                batchSize,
+            #                                                **trainingOptsPerModel[modelName])
+
+
+
+
+
+        if doFigs and False:
         # Find which model to save the results (when having multiple
         # realizations)
             lossTrain[modelName][split] = thisTrainVars['lossTrain']
@@ -762,7 +903,7 @@ for split in range(nDataSplits):
             costValid[modelName][split] = thisTrainVars['costValid']
                     
     # And we also need to save 'nBatches' but is the same for all models, so
-    if doFigs:
+    if doFigs and False:
         nBatches = thisTrainVars['nBatches']
 
     #%%##################################################################
@@ -795,45 +936,81 @@ for split in range(nDataSplits):
         # Evaluate the model
         thisEvalVars = modelsGNN[thisModel].evaluate(data)
 
-        thisEvalVarsPerturbation=[]
-        for epsilon in epsilons:
-            print(epsilon)
-            thisEvalVarsPerturbation = thisEvalVarsPerturbation + [modelsGNN[thisModel].evaluatePerturbation(data,epsilon)]
 
-        # Save the outputs
-        thisCostBest = thisEvalVars['costBest']
-        thisCostLast = thisEvalVars['costLast']
+        evalVarsPerturbation = [[None,None] for i in range(len(epsilons)) ]
 
-        thisCostPerturbationBest = []
-        thisCostPerturbationLast = []
+        for idx,epsilon in enumerate(epsilons):
 
-        for i in len(epsilons):
-            thisCostPerturbationBest = thisCostPerturbationBest + thisEvalVarsPerturbation[i]['costBest']
-            thisCostPerturbationLast = thisCostPerturbationBest + thisEvalVarsPerturbation[i]['costLast']
+            thisEvalVarsPerturbation = 0  #  Last
+            for i in range(numberPerturbations):
+                #Create Perturbed Matrix
+                E=np.random.uniform(size=S.shape)
+                scale=epsilon*np.random.uniform()
+                E=scale*E/np.linalg.norm(E)
+                #print(S.shape,E.shape)
+                S_hat=S+S@E+E@S
+                if '1Ly' in thisModel:
+                    modelsGNN[thisModel].archit.changeGSO(E, [E.shape[0]])
+                elif '2Ly' in thisModel:
+                    modelsGNN[thisModel].archit.changeGSO(E, [E.shape[0], E.shape[0]])
+                # evaluate
+                thisEvalPertVars = modelsGNN[thisModel].evaluate(data)
 
-        # thisCostPerturbationBest = thisEvalVarsPerturbation['costBest']
-        # thisCostPerturbationLast = thisEvalVarsPerturbation['costLast']
+                thisEvalVarsPerturbation=thisEvalVarsPerturbation+thisEvalPertVars['costLast']
+
+            thisEvalVarsPerturbation=thisEvalVarsPerturbation/numberPerturbations
+            evalVarsPerturbation[idx] =thisEvalVarsPerturbation
+
+        if trainStabilityEpsilon==0:
+            # Save the outputs
+            thisCostBest = thisEvalVars['costBest']
+            thisCostLast = thisEvalVars['costLast']
 
 
-        # Write values
-        writeVarValues(varsFile,
-                       {'costBest%s' % thisModel: thisCostBest,
-                        'costLast%s' % thisModel: thisCostLast,},)
-        for i in len(epsilons):
+            # Write values
             writeVarValues(varsFile,
-                           {'Epsilon'+str(epsilons[i])+', costPerturbationBest%s' % thisModel: thisCostPerturbationBest[i],
-                            'Epsilon'+str(epsilons[i])+', costPerturbationLast%s' % thisModel: thisCostPerturbationLast[i],} ,)
+                           {'costBest%s' % thisModel: thisCostBest,
+                            'costLast%s' % thisModel: thisCostLast,},)
+            for i in range(len(epsilons)):
+                writeVarValues(varsFile,
+                               {'epsilon'+str(epsilons[i])+'costPerturbationBest%s' % thisModel: evalVarsPerturbation[i][0],
+                                'epsilon'+str(epsilons[i])+'costPerturbationLast%s' % thisModel: evalVarsPerturbation[i][1],} ,)
 
-        # Now check which is the model being trained
-        costBest[modelName][split] = thisCostBest
-        costLast[modelName][split] = thisCostLast
+            # Now check which is the model being trained
+            costBest[modelName][split] = thisCostBest
+            costLast[modelName][split] = thisCostLast
+
+            for e in range(len(epsilons)):
+                costPerturbationBest[modelName][e][split] = evalVarsPerturbation[e][0]
+                costPerturbationLast[modelName][e][split] = evalVarsPerturbation[e][1]
+
+        else:
+
+            thisCostLast = thisEvalVars['costLast']
+
+
+            # Write values
+            writeVarValues(varsFile,
+                           {'costLast%s' % thisModel: thisCostLast,},)
+            for i in range(len(epsilons)):
+                writeVarValues(varsFile,
+                               {'epsilon'+str(epsilons[i])+'costPerturbationBest%s' % thisModel: evalVarsPerturbation[i]} ,)
+
+            # Now check which is the model being trained
+            costLast[modelName][split] = thisCostLast
+
+            for e in range(len(epsilons)):
+                costPerturbationLast[modelName][e][split] = evalVarsPerturbation[e]
         # This is so that we can later compute a total accuracy with
         # the corresponding error.
-        
-        if doPrint:
-            print("\t%s: %.4f [Best] %.4f [Last],Perturbed %.4f [Best] %.4f [Last]" % (thisModel, thisCostBest,
-                                                     thisCostLast,thisCostPerturbationBest,thisCostPerturbationLast))
 
+        if trainStabilityEpsilon==0:
+            if doPrint:
+                print("\t%s: %.4f [Best] %.4f [Last]" % (thisModel, thisCostBest,
+                                                         thisCostLast))
+                for e in range(len(epsilons)):
+                    print("\t%s: Perturbed epsilon %.4f : %.4f [Best] %.4f [Last]" % (thisModel, epsilons[e], evalVarsPerturbation[e][0],
+                                                                                               evalVarsPerturbation[e][1]))
 ############################
 # FINAL EVALUATION RESULTS #
 ############################
@@ -846,8 +1023,11 @@ meanCostLast = {} # Mean across data splits
 stdDevCostBest = {} # Standard deviation across data splits
 stdDevCostLast = {} # Standard deviation across data splits
 
-if doPrint:
-    print("\nFinal evaluations (%02d data splits)" % (nDataSplits))
+perturbed_values = {}
+
+
+
+print("\nFinal evaluations (%02d data splits)" % (nDataSplits))
 
 for thisModel in modelList:
     # Convert the lists into a nDataSplits vector
@@ -855,38 +1035,91 @@ for thisModel in modelList:
     costLast[thisModel] = np.array(costLast[thisModel])
 
     # And now compute the statistics (across graphs)
-    meanCostBest[thisModel] = np.mean(costBest[thisModel])
-    meanCostLast[thisModel] = np.mean(costLast[thisModel])
-    stdDevCostBest[thisModel] = np.std(costBest[thisModel])
-    stdDevCostLast[thisModel] = np.std(costLast[thisModel])
+    if trainStabilityEpsilon==0:
+        meanCostBest[thisModel] = np.mean(costBest[thisModel])
+        stdDevCostBest[thisModel] = np.std(costBest[thisModel])
+
+        meanCostLast[thisModel] = np.mean(costLast[thisModel])
+        stdDevCostLast[thisModel] = np.std(costLast[thisModel])
+
+    else:
+
+        meanCostLast[thisModel] = np.mean(costLast[thisModel])
+        stdDevCostLast[thisModel] = np.std(costLast[thisModel])
+
+    perturbed_values[thisModel] = [None] * len(epsilons)
+
+    for e in range(len(epsilons)):
+        costPerturbationLast[thisModel][e] = np.array(costPerturbationLast[thisModel][e])
+
+        perturbed_values[thisModel][e] = [np.mean(costPerturbationLast[thisModel][e]),np.std(costPerturbationLast[thisModel][e])]
 
     # And print it:
     if doPrint:
-        print("\t%s: %6.4f (+-%6.4f) [Best] %6.4f (+-%6.4f) [Last]" % (
-                thisModel,
-                meanCostBest[thisModel],
-                stdDevCostBest[thisModel],
-                meanCostLast[thisModel],
-                stdDevCostLast[thisModel]))
+        if trainStabilityEpsilon==0:
+            print("\t%s: %6.4f (+-%6.4f) [Best] %6.4f (+-%6.4f) [Last]" % (
+                    thisModel,
+                    meanCostBest[thisModel],
+                    stdDevCostBest[thisModel],
+                    meanCostLast[thisModel],
+                    stdDevCostLast[thisModel]))
+            for e in range(len(epsilons)):
+                print("\t%s: Perturbed epsilon %.4f : %6.4f (+-%6.4f) [Best] %6.4f (+-%6.4f) [Last]" % (
+                thisModel, epsilons[e], perturbed_values[thisModel][e][0],perturbed_values[thisModel][e][1],
+                perturbed_values[thisModel][e][2],perturbed_values[thisModel][e][3]))
+        else:
+            print("\t%s:  %6.4f (+-%6.4f) [Last]" % (
+                    thisModel,
+                    meanCostLast[thisModel],
+                    stdDevCostLast[thisModel]))
+            for e in range(len(epsilons)):
+                print("\t%s: Perturbed epsilon %.4f : %6.4f (+-%6.4f) [Last]" % (
+                thisModel, epsilons[e], perturbed_values[thisModel][e][0],
+                perturbed_values[thisModel][e][1]))
 
     # Save values
-    writeVarValues(varsFile,
+    if trainStabilityEpsilon == 0:
+        writeVarValues(varsFile,
                {'meanCostBest%s' % thisModel: meanCostBest[thisModel],
                 'stdDevCostBest%s' % thisModel: stdDevCostBest[thisModel],
                 'meanCostLast%s' % thisModel: meanCostLast[thisModel],
                 'stdDevCostLast%s' % thisModel : stdDevCostLast[thisModel]})
+    else:
+        writeVarValues(varsFile,
+               {'meanCostLast%s' % thisModel: meanCostLast[thisModel],
+                'stdDevCostLast%s' % thisModel : stdDevCostLast[thisModel]})
+
     
 # Save the printed info into the .txt file as well
-with open(varsFile, 'a+') as file:
-    file.write("Final evaluations (%02d data splits)\n" % (nDataSplits))
-    for thisModel in modelList:
-        file.write("\t%s: %6.4f (+-%6.4f) [Best] %6.4f (+-%6.4f) [Last]\n" % (
-                   thisModel,
-                   meanCostBest[thisModel],
-                   stdDevCostBest[thisModel],
-                   meanCostLast[thisModel],
-                   stdDevCostLast[thisModel]))
-    file.write('\n')
+if trainStabilityEpsilon==0:
+    with open(varsFile, 'a+') as file:
+        file.write("Final evaluations (%02d data splits)\n" % (nDataSplits))
+        for thisModel in modelList:
+            file.write("\t%s: %6.4f (+-%6.4f) [Best] %6.4f (+-%6.4f) [Last]\n" % (
+                       thisModel,
+                       meanCostBest[thisModel],
+                       stdDevCostBest[thisModel],
+                       meanCostLast[thisModel],
+                       stdDevCostLast[thisModel]))
+            file.write('\n')
+            for idx,e in enumerate(epsilons):
+                file.write("\t%s: Perturbed epsilon %.4f : %6.4f (+-%6.4f) [Best] %6.4f (+-%6.4f) [Last]\n" % (
+                    thisModel, e, perturbed_values[thisModel][idx][0],
+                    perturbed_values[thisModel][idx][2], perturbed_values[thisModel][idx][1], perturbed_values[thisModel][idx][3]))
+            file.write('\n')
+else:
+    with open(varsFile, 'a+') as file:
+        file.write("Final evaluations (%02d data splits)\n" % (nDataSplits))
+        for thisModel in modelList:
+            file.write("\t%s:  %6.4f (+-%6.4f) [Last]\n" % (
+                thisModel,
+                meanCostLast[thisModel],
+                stdDevCostLast[thisModel]))
+            for idx, e in enumerate(epsilons):
+                file.write("\t%s: Perturbed epsilon %.4f : %6.4f (+-%6.4f) [Last]\n" % (
+                    thisModel, e, perturbed_values[thisModel][idx][0],
+                    perturbed_values[thisModel][idx][1]))
+        file.write('\n')
 
 #%%##################################################################
 #                                                                   #

@@ -88,6 +88,80 @@ def evaluate(model, data, **kwargs):
 
     return evalVars
 
+
+def evaluateNoBest(model, data, **kwargs):
+    """
+    evaluate: evaluate a model using classification error
+
+    Input:
+        model (model class): class from Modules.model
+        data (data class): a data class from the Utils.dataTools; it needs to
+            have a getSamples method and an evaluate method.
+        doPrint (optional, bool): if True prints results
+
+    Output:
+        evalVars (dict): 'errorBest' contains the error rate for the best
+            model, and 'errorLast' contains the error rate for the last model
+    """
+
+    # Get the device we're working on
+    device = model.device
+
+    if 'doSaveVars' in kwargs.keys():
+        doSaveVars = kwargs['doSaveVars']
+    else:
+        doSaveVars = True
+
+    ########
+    # DATA #
+    ########
+
+    xTest, yTest = data.getSamples('test')
+    xTest = xTest.to(device)
+    yTest = yTest.to(device)
+
+    # ##############
+    # # BEST MODEL #
+    # ##############
+    #
+    # model.load(label='Best')
+    #
+    # with torch.no_grad():
+    #     # Process the samples
+    #     yHatTest = model.archit(xTest)
+    #     # yHatTest is of shape
+    #     #   testSize x numberOfClasses
+    #     # We compute the error
+    #     costBest = data.evaluate(yHatTest, yTest)
+
+    ##############
+    # LAST MODEL #
+    ##############
+
+    model.load(label='Last')
+
+    with torch.no_grad():
+        # Process the samples
+        yHatTest = model.archit(xTest)
+        # yHatTest is of shape
+        #   testSize x numberOfClasses
+        # We compute the error
+        costLast = data.evaluate(yHatTest, yTest)
+
+    evalVars = {}
+    # evalVars['costBest'] = costBest.item()
+    evalVars['costLast'] = costLast.item()
+
+    if doSaveVars:
+        saveDirVars = os.path.join(model.saveDir, 'evalVars')
+        if not os.path.exists(saveDirVars):
+            os.makedirs(saveDirVars)
+        pathToFile = os.path.join(saveDirVars, model.name + 'evalVars.pkl')
+        with open(pathToFile, 'wb') as evalVarsFile:
+            pickle.dump(evalVars, evalVarsFile)
+
+    return evalVars
+
 def evaluateSingleNode(model, data, **kwargs):
     """
     evaluateSingleNode: evaluate a model that has a single node forward
@@ -104,7 +178,7 @@ def evaluateSingleNode(model, data, **kwargs):
         evalVars (dict): 'errorBest' contains the error rate for the best
             model, and 'errorLast' contains the error rate for the last model
     """
-    
+
     assert 'singleNodeForward' in dir(model.archit)
     assert 'getLabelID' in dir(data)
 
@@ -168,9 +242,9 @@ def evaluateSingleNode(model, data, **kwargs):
     return evalVars
 
 
-def evaluateSingleNodeRelativePerturbation(model, data, epsilon, **kwargs):
+def evaluateSingleNodeNoBest(model, data, **kwargs):
     """
-    evaluateSingleNodeRelativePerturbation: evaluate a model that has a single node forward
+    evaluateSingleNode: evaluate a model that has a single node forward
 
     Input:
         model (model class): class from Modules.model, needs to have a
@@ -205,19 +279,19 @@ def evaluateSingleNodeRelativePerturbation(model, data, epsilon, **kwargs):
     yTest = yTest.to(device)
     targetIDs = data.getLabelID('test')
 
-    ##############
-    # BEST MODEL #
-    ##############
-
-    model.load(label='Best')
-
-    with torch.no_grad():
-        # Process the samples
-        yHatTest = model.archit.singleNodeForward(xTest, targetIDs)
-        # yHatTest is of shape
-        #   testSize x numberOfClasses
-        # We compute the error
-        costBest = data.evaluate(yHatTest, yTest)
+    # ##############
+    # # BEST MODEL #
+    # ##############
+    #
+    # model.load(label='Best')
+    #
+    # with torch.no_grad():
+    #     # Process the samples
+    #     yHatTest = model.archit.singleNodeForward(xTest, targetIDs)
+    #     # yHatTest is of shape
+    #     #   testSize x numberOfClasses
+    #     # We compute the error
+    #     costBest = data.evaluate(yHatTest, yTest)
 
     ##############
     # LAST MODEL #
@@ -232,6 +306,95 @@ def evaluateSingleNodeRelativePerturbation(model, data, epsilon, **kwargs):
         #   testSize x numberOfClasses
         # We compute the error
         costLast = data.evaluate(yHatTest, yTest)
+
+    evalVars = {}
+    # evalVars['costBest'] = costBest.item()
+    evalVars['costLast'] = costLast.item()
+
+    if doSaveVars:
+        saveDirVars = os.path.join(model.saveDir, 'evalVars')
+        if not os.path.exists(saveDirVars):
+            os.makedirs(saveDirVars)
+        pathToFile = os.path.join(saveDirVars, model.name + 'evalVars.pkl')
+        with open(pathToFile, 'wb') as evalVarsFile:
+            pickle.dump(evalVars, evalVarsFile)
+
+    return evalVars
+
+def evaluateSingleNodeRelativePerturbation(model, data, epsilon,  **kwargs):
+    """
+    evaluateSingleNodeRelativePerturbation: evaluate a model that has a single node forward
+
+    Input:
+        model (model class): class from Modules.model, needs to have a
+            'singleNodeForward' method
+        data (data class): a data class from the Utils.dataTools; it needs to
+            have a getSamples method and an evaluate method and it also needs to
+            have a 'getLabelID' method
+        doPrint (optional, bool): if True prints results
+
+    Output:
+        evalVars (dict): 'errorBest' contains the error rate for the best
+            model, and 'errorLast' contains the error rate for the last model
+    """
+    assert 'singleNodeForward' in dir(model.archit)
+    assert 'getLabelID' in dir(data)
+
+    numberOfPerturbations = 10
+
+    # Get the device we're working on
+    device = model.device
+
+    if 'doSaveVars' in kwargs.keys():
+        doSaveVars = kwargs['doSaveVars']
+    else:
+        doSaveVars = True
+
+    ########
+    # DATA #
+    ########
+
+    xTest, yTest = data.getSamples('test')
+    xTest = xTest.to(device)
+    yTest = yTest.to(device)
+    targetIDs = data.getLabelID('test')
+
+    ########
+    # MODIFY GRAPH #
+    ########
+
+
+
+    ##############
+    # BEST MODEL #
+    ##############
+
+    model.load(label='Best')
+    for i in range(M):
+
+
+        with torch.no_grad():
+            # Process the samples
+            yHatTest = model.archit.singleNodeForward(xTest, targetIDs)
+            # yHatTest is of shape
+            #   testSize x numberOfClasses
+            # We compute the error
+            costBest = data.evaluate(yHatTest, yTest)
+
+    ##############
+    # LAST MODEL #
+    ##############
+
+    model.load(label='Last')
+
+    with torch.no_grad():
+        # Process the samples
+        yHatTest = model.archit.singleNodeForward(xTest, targetIDs)
+        # yHatTest is of shape
+        #   testSize x numberOfClasses
+        # We compute the error
+        costLast = data.evaluate(yHatTest, yTest)
+
 
     evalVars = {}
     evalVars['costBest'] = costBest.item()

@@ -99,17 +99,17 @@ class Model:
         
     def train(self, data, nEpochs, batchSize, **kwargs):
         
-        self.trainer = self.trainer(self, data, nEpochs, batchSize, **kwargs)
+        self.trainere = self.trainer(self, data, nEpochs, batchSize, **kwargs)
         
-        return self.trainer.train()
+        return self.trainere.train()
     
     def evaluate(self, data, **kwargs):
         
         return self.evaluator(self, data, **kwargs)
 
-    def evaluatePerturbation(self, data, **kwargs):
+    def evaluatePerturbation(self, data, epsilon, **kwargs):
 
-        return self.evaluatorPerturbation (self, data, **kwargs)
+        return self.evaluatorPerturbation (self, data, epsilon, **kwargs)
     
     def save(self, label = '', **kwargs):
         if 'saveDir' in kwargs.keys():

@@ -397,7 +397,7 @@ class Trainer:
                 # Extract the adequate batch
                 thisBatchIndices = idxEpoch[batchIndex[batch]
                                             : batchIndex[batch+1]]
-                
+
                 lossValueTrain, costValueTrain, timeElapsed = \
                                                self.trainBatch(thisBatchIndices)
                 
