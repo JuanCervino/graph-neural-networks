@@ -144,6 +144,10 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
         file.write('%s\n\n' % datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
         file.write('Epsilon Train = ' + str(trainStabilityEpsilon) + '\n')
         file.write( 'Number of perturbations'  + str(numberPerturbations))
+        file.write( 'Dual Delta'  + str(dualDelta))
+        file.write( 'Dual Eta'  + str(dualEta))
+        file.write( 'Stability Epsilon'  + str(trainStabilityEpsilon))
+
         file.write('\n\n')
     #\\\ Save seeds for reproducibility
     #   PyTorch seeds
