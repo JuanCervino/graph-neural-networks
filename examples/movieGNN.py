@@ -967,7 +967,7 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
 
                     lossValueTrainPerturbed = lossValueTrainPerturbed / numberPerturbationsTrain
                     print(lossValueTrainPerturbed - lossValueTrainNonPerturbed)
-                    dualVariable = np.max((dualVariable + dualEta *(lossValueTrainPerturbed - lossValueTrainNonPerturbed - dualDelta)))
+                    dualVariable = np.max((dualVariable + dualEta *(lossValueTrainPerturbed - lossValueTrainNonPerturbed - dualDelta),0))
 
 
                 modelsGNN[thisModel].save(label='Last')
