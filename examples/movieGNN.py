@@ -104,8 +104,10 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
     learningRateDecayRate = 0.9 # Rate
     learningRateDecayPeriod = 1 # How many epochs after which update the lr
     validationInterval = 5 # How many training steps to do the validation
+    dualVariablePerEpoch={}
 
-    dualVariablePerEpoch=[ [None] * nEpochs ] *  nDataSplits
+    dualVariablePerEpoch['LclGNN1Ly']=[ [None] * nEpochs ] *  nDataSplits
+    dualVariablePerEpoch['LclGNN2Ly']=[ [None] * nEpochs ] *  nDataSplits
 
 
     graphType = 'movie' # Graph type: 'user'-based or 'movie'-based
@@ -863,7 +865,7 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
                     randomPermutation = np.random.permutation(data.nTrain)
                     idxEpoch = [int(i) for i in randomPermutation]
 
-                    dualVariablePerEpoch[split][epoch]=dualVariable
+                    dualVariablePerEpoch[thisModel][split][epoch]=dualVariable
 
                     for batch in range(nBatches): # nBatches
                         # Extract the adequate batch
@@ -1154,6 +1156,12 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
 
             perturbed_values[thisModel][e] = [np.mean(costPerturbationLast[thisModel][e]),np.std(costPerturbationLast[thisModel][e])]
 
+        #Now Dual Variables
+        #dualVariablePerEpoch[thisModel][split][epoch]
+        print( 'For model ',thisModel,'the lambda history is:', np.mean(dualVariablePerEpoch[thisModel],axis= 0))
+        print( 'For model ',thisModel,'the std history is:', np.std(dualVariablePerEpoch[thisModel],axis= 0))
+
+
         # And print it:
         if doPrint:
             if trainStabilityEpsilon==0:
@@ -1220,6 +1228,8 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
                         thisModel, e, perturbed_values[thisModel][idx][0],
                         perturbed_values[thisModel][idx][1]))
             file.write('\n')
+            file.write('For model ', thisModel, 'the lambda history is:', np.mean(dualVariablePerEpoch[thisModel], axis=0))
+            file.write('For model ', thisModel, 'the std history is:', np.std(dualVariablePerEpoch[thisModel], axis=0))
 
     #   Pickle, first:
     varsPickle = {}
