@@ -924,10 +924,12 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
                     # Update Dual Variable
                     #################################
 
-                    batchIndex=np.random.choice(np.arange(nBatches), size=dualNumberOfBatchesPerDual, replace=False)
-
+                    batchIndexDual=np.random.choice(np.arange(nBatches), size=dualNumberOfBatchesPerDual, replace=False)
                     # Evaluate the losses
-                    thisBatchIndices = idxEpoch[batchIndex]
+                    thisBatchIndices = []
+                    for i in range(dualNumberOfBatchesPerDual):
+                        thisBatchIndices=thisBatchIndices+[idxEpoch[batchIndexDual[i]]]
+
                     xTrain, yTrain = data.getSamples('train', thisBatchIndices)
                     xTrain = xTrain.to(modelsGNN[thisModel].device)
                     yTrain = yTrain.to(modelsGNN[thisModel].device)
