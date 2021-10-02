@@ -74,8 +74,8 @@ dualNumberOfBatchesPerDual= 10
 dualDelta=0.1
 dualEta=0.1
 trainStabilityEpsilon=0.2
-nEpochs=3
-nDataSplits=2
+nEpochs=20
+nDataSplits=10
 
 mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
 
