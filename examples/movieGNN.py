@@ -32,10 +32,10 @@
 
 import sys,os
 
-os.chdir('..')
-cwd = os.getcwd()
-print(cwd)
-sys.path.append(cwd)
+# os.chdir('..')
+# cwd = os.getcwd()
+# print(cwd)
+# sys.path.append(cwd)
 
 import numpy as np
 import matplotlib
@@ -73,9 +73,15 @@ startRunTime = datetime.datetime.now()
 #                    SETTING PARAMETERS                             #
 #                                                                   #
 #####################################################################
-
+# dualDelta=0.1
+# dualNumberOfBatchesPerDual= 10
+# dualEta=0.1
+# trainStabilityEpsilon=0.2
+# nEpochs=20
+# nDataSplits=10
 
 def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits ):
+
     # Start measuring time
     startRunTime = datetime.datetime.now()
     epsilons = [0.0001,0.001,0.01,0.1,0.2,0.5]
@@ -99,7 +105,7 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
     learningRateDecayPeriod = 1 # How many epochs after which update the lr
     validationInterval = 5 # How many training steps to do the validation
 
-    dualVariablePerEpoch=[ [None] * [nEpochs] ] *  nDataSplits
+    dualVariablePerEpoch=[ [None] * nEpochs ] *  nDataSplits
 
 
     graphType = 'movie' # Graph type: 'user'-based or 'movie'-based
