@@ -1158,8 +1158,8 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
 
         #Now Dual Variables
         #dualVariablePerEpoch[thisModel][split][epoch]
-        print( 'For model ',thisModel,'the lambda history is:', np.mean(dualVariablePerEpoch[thisModel[:-3]],axis= 0))
-        print( 'For model ',thisModel,'the std history is:', np.std(dualVariablePerEpoch[thisModel[:-3]],axis= 0))
+        print( 'For model ',thisModel,'the lambda history is:', np.mean(dualVariablePerEpoch[thisModel],axis= 0))
+        print( 'For model ',thisModel,'the std history is:', np.std(dualVariablePerEpoch[thisModel],axis= 0))
 
 
         # And print it:
