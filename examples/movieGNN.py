@@ -1303,6 +1303,12 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
         varsPickle['meanCostValid'] = meanCostValid
         varsPickle['stdDevCostValid'] = stdDevCostValid
         varsPickle['lambdas'] = dualVariablePerEpoch
+
+        saveDirFigs = os.path.join(saveDir, 'figs')
+        # If it doesn't exist, create it.
+        if not os.path.exists(saveDirFigs):
+            os.makedirs(saveDirFigs)
+
         with open(os.path.join(saveDirFigs,'figVars.pkl'), 'wb') as figVarsFile:
             pickle.dump(varsPickle, figVarsFile)
 
