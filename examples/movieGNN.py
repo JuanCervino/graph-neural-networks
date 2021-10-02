@@ -1228,8 +1228,8 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
                         thisModel, e, perturbed_values[thisModel][idx][0],
                         perturbed_values[thisModel][idx][1]))
             file.write('\n')
-            file.write('For model '+str( thisModel)+'the lambda history is:'+str(np.mean(dualVariablePerEpoch[thisModel], axis=0)))
-            file.write('For model '+str( thisModel)+'the std history is:'+str(np.std(dualVariablePerEpoch[thisModel], axis=0)))
+            file.write('For model '+str(thisModel)+'the lambda history is:'+str(np.mean(dualVariablePerEpoch[thisModel], axis=0)))
+            file.write('For model '+str(thisModel)+'the std history is:'+str(np.std(dualVariablePerEpoch[thisModel], axis=0)))
 
     #   Pickle, first:
     # varsPickle = {}
