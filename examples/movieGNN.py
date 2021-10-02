@@ -865,7 +865,7 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
                     randomPermutation = np.random.permutation(data.nTrain)
                     idxEpoch = [int(i) for i in randomPermutation]
 
-                    dualVariablePerEpoch[thisModel][split][epoch]=dualVariable
+                    dualVariablePerEpoch[thisModel[:-3]][split][epoch]=dualVariable
 
                     for batch in range(nBatches): # nBatches
                         # Extract the adequate batch
@@ -1158,8 +1158,8 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
 
         #Now Dual Variables
         #dualVariablePerEpoch[thisModel][split][epoch]
-        print( 'For model ',thisModel,'the lambda history is:', np.mean(dualVariablePerEpoch[thisModel],axis= 0))
-        print( 'For model ',thisModel,'the std history is:', np.std(dualVariablePerEpoch[thisModel],axis= 0))
+        print( 'For model ',thisModel,'the lambda history is:', np.mean(dualVariablePerEpoch[thisModel[:-3]],axis= 0))
+        print( 'For model ',thisModel,'the std history is:', np.std(dualVariablePerEpoch[thisModel[:-3]],axis= 0))
 
 
         # And print it:
@@ -1232,16 +1232,17 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
             file.write('For model ', thisModel, 'the std history is:', np.std(dualVariablePerEpoch[thisModel], axis=0))
 
     #   Pickle, first:
-    varsPickle = {}
-    varsPickle['nEpochs'] = nEpochs
-    varsPickle['nBatches'] = nBatches
-    varsPickle['dualVariablePerEpoch'] = dualVariablePerEpoch
-    varsPickle['dualEta'] = dualEta
-    varsPickle['dualNumberOfBatchesPerDual'] = dualNumberOfBatchesPerDual
-    varsPickle['dualDelta'] = dualDelta
-
-    with open(os.path.join(saveDirFigs,'figVars.pkl'), 'wb') as figVarsFile:
-        pickle.dump(varsPickle, figVarsFile)
+    # varsPickle = {}
+    # varsPickle['nEpochs'] = nEpochs
+    # varsPickle['nBatches'] = nBatches
+    # varsPickle['dualVariablePerEpoch'] = dualVariablePerEpoch
+    # varsPickle['dualEta'] = dualEta
+    # varsPickle['dualNumberOfBatchesPerDual'] = dualNumberOfBatchesPerDual
+    # varsPickle['dualDelta'] = dualDelta
+    #
+    #
+    # with open(os.path.join(saveDirFigs,'figVars.pkl'), 'wb') as figVarsFile:
+    #     pickle.dump(varsPickle, figVarsFile)
 
     #%%##################################################################
     #                                                                   #
