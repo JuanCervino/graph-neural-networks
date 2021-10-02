@@ -863,7 +863,7 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
                     randomPermutation = np.random.permutation(data.nTrain)
                     idxEpoch = [int(i) for i in randomPermutation]
 
-                    dualVariablePerEpoch[epoch][nDataSplits]=dualVariable
+                    dualVariablePerEpoch[nDataSplits][epoch]=dualVariable
 
                     for batch in range(nBatches): # nBatches
                         # Extract the adequate batch

@@ -68,17 +68,10 @@ from alegnn.utils.miscTools import saveSeed
 import movieGNN as mv
 
 
+dualNumberOfBatchesPerDual= 10
+
+
 dualDelta=0.1
-dualNumberOfBatchesPerDual= 10
-dualEta=0.1
-trainStabilityEpsilon=0.2
-nEpochs=20
-nDataSplits=10
-
-mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
-
-dualDelta=0.05
-dualNumberOfBatchesPerDual= 10
 dualEta=0.1
 trainStabilityEpsilon=0.2
 nEpochs=20
@@ -87,7 +80,40 @@ nDataSplits=10
 mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
 
 dualDelta=0.1
-dualNumberOfBatchesPerDual= 10
+dualEta=0.05
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+dualDelta=0.1
+dualEta=0.02
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+dualDelta=0.1
+dualEta=0.01
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+##
+
+dualDelta=0.05
+dualEta=0.1
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+dualDelta=0.05
 dualEta=0.05
 trainStabilityEpsilon=0.2
 nEpochs=20
@@ -96,8 +122,50 @@ nDataSplits=10
 mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
 
 dualDelta=0.05
-dualNumberOfBatchesPerDual= 10
+dualEta=0.02
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+dualDelta=0.05
+dualEta=0.01
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+
+##
+
+dualDelta=0.08
+dualEta=0.1
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+dualDelta=0.08
 dualEta=0.05
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+dualDelta=0.08
+dualEta=0.02
+trainStabilityEpsilon=0.2
+nEpochs=20
+nDataSplits=10
+
+mv.moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+dualDelta=0.08
+dualEta=0.01
 trainStabilityEpsilon=0.2
 nEpochs=20
 nDataSplits=10
