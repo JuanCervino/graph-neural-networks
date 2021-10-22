@@ -962,9 +962,9 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
                         # print(S.shape,E.shape)
                         S_hat = S + S @ E + E @ S
                         if '1Ly' in thisModel:
-                            modelsGNN[thisModel].archit.changeGSO(E, [E.shape[0]])
+                            modelsGNN[thisModel].archit.changeGSO(S_hat, [S_hat.shape[0]])
                         elif '2Ly' in thisModel:
-                            modelsGNN[thisModel].archit.changeGSO(E, [E.shape[0], E.shape[0]])
+                            modelsGNN[thisModel].archit.changeGSO(S_hat, [S_hat.shape[0], S_hat.shape[0]])
 
                         yHatTrain = modelsGNN[thisModel].archit.singleNodeForward(xTrain, targetIDs)
 
@@ -1055,9 +1055,9 @@ def moviePerturbationFunction(dualDelta,dualNumberOfBatchesPerDual,dualEta,train
                     #print(S.shape,E.shape)
                     S_hat=S+S@E+E@S
                     if '1Ly' in thisModel:
-                        modelsGNN[thisModel].archit.changeGSO(E, [E.shape[0]])
+                        modelsGNN[thisModel].archit.changeGSO(S_hat, [S_hat.shape[0]])
                     elif '2Ly' in thisModel:
-                        modelsGNN[thisModel].archit.changeGSO(E, [E.shape[0], E.shape[0]])
+                        modelsGNN[thisModel].archit.changeGSO(S_hat, [S_hat.shape[0], S_hat.shape[0]])
                     # evaluate
                     thisEvalPertVars = modelsGNN[thisModel].evaluate(data)
 
