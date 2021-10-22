@@ -32,10 +32,10 @@
 
 import sys,os
 
-# os.chdir('..')
-# cwd = os.getcwd()
-# print(cwd)
-# sys.path.append(cwd)
+os.chdir('..')
+cwd = os.getcwd()
+print(cwd)
+sys.path.append(cwd)
 
 import numpy as np
 import matplotlib
