@@ -66,6 +66,14 @@ from alegnn.utils.miscTools import writeVarValues
 from alegnn.utils.miscTools import saveSeed
 
 import movieGNN as mv
+import movieGNNWorkingNoDuality as mvnd
+
+
+
+epsilons,numberPerturbations,trainStabilityEpsilon,nEpochs,nDataSplits = [0.0001,0.001,0.01,0.1,0.2,0.5],10,0.1,20,10
+mvnd.movieFunction(epsilons,numberPerturbations,trainStabilityEpsilon,nEpochs,nDataSplits)
+
+
 
 
 dualNumberOfBatchesPerDual= 10
