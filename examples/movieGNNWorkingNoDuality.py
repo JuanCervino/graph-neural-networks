@@ -77,7 +77,7 @@ startRunTime = datetime.datetime.now()
 #epsilons = [0.0001,0.001,0.01,0.1,0.2,0.5]
 #numberPerturbations=10
 #trainStabilityEpsilon=0.1
-def movieFunction(epsilons,numberPerturbations,trainStabilityEpsilon,nEpochs,nDataSplits ):
+def movieFunction(epsilons,numberPerturbations,nEpochs,nDataSplits, trainStabilityEpsilon=0 ):
 
     graphType = 'movie' # Graph type: 'user'-based or 'movie'-based
     labelID = [50] # Which node to focus on (either a list or the str 'all')
