@@ -974,8 +974,7 @@ def movieFunction(epsilons,numberPerturbations,nEpochs,nDataSplits, trainStabili
                                 'costLast%s' % thisModel: thisCostLast,},)
                 for i in range(len(epsilons)):
                     writeVarValues(varsFile,
-                                   {'epsilon'+str(epsilons[i])+'costPerturbationBest%s' % thisModel: evalVarsPerturbation[i][0],
-                                    'epsilon'+str(epsilons[i])+'costPerturbationLast%s' % thisModel: evalVarsPerturbation[i][1],} ,)
+                                   {'epsilon'+str(epsilons[i])+'costPerturbationBest%s' % thisModel: evalVarsPerturbation[i]} ,)
 
                 # Now check which is the model being trained
                 costBest[modelName][split] = thisCostBest
